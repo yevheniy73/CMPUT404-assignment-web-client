@@ -24,6 +24,15 @@ import re
 # you may use urllib to encode data appropriately
 import urllib.parse
 
+#---------------------------------------------------------------------
+HTTP1_1 = 'HTTP/1.1\r\n'
+HOST = 'Host:'
+ACCEPT_CHARS = 'Accept-Charset: UTF-8\r\n'
+URL_ENCODED = 'Content-Type: application/x-www-form-urlencoded\r\n'
+CONTENT_LENGTH = 'Content-Length:'
+CON_CLOSE = 'Connection:close\r\n\r\n'
+#---------------------------------------------------------------------
+
 def help():
     print("httpclient.py [GET/POST] [URL]\n")
 
@@ -33,22 +42,40 @@ class HTTPResponse(object):
         self.body = body
 
 class HTTPClient(object):
-    #def get_host_port(self,url):
+#------------------------------------------------------------------------------------------------------------------------------------------------
+    def get_host_port(self, url_parse):
+        port_number = url_parse.port
+        port_number = port_number if port_number else 80
 
+        return port_number
+    
+#------------------------------------------------------------------------------------------------------------------------------------------------   
+    def get_path_component(self, url_parse):
+        path_component = url_parse.path
+        path_component = path_component if path_component else "/"
+
+        return path_component
+    
+#------------------------------------------------------------------------------------------------------------------------------------------------
     def connect(self, host, port):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.socket.connect((host, port))
         return None
 
     def get_code(self, data):
-        return None
+        status_line = data.split('\r\n')[0]
+        status_code = status_line.split()[1]
+        return int(status_code)
 
     def get_headers(self,data):
-        return None
+        response_headers = data.split('\r\n\r\n')[0]
+        return str(response_headers)
 
     def get_body(self, data):
-        return None
+        response_body = data.split('\r\n\r\n')[1]
+        return str(response_body)
     
+#------------------------------------------------------------------------------------------------------------------------------------------------
     def sendall(self, data):
         self.socket.sendall(data.encode('utf-8'))
         
@@ -66,16 +93,53 @@ class HTTPClient(object):
             else:
                 done = not part
         return buffer.decode('utf-8')
-
+    
+#------------------------------------------------------------------------------------------------------------------------------------------------
     def GET(self, url, args=None):
-        code = 500
-        body = ""
-        return HTTPResponse(code, body)
 
-    def POST(self, url, args=None):
-        code = 500
-        body = ""
+        url_parse = urllib.parse.urlparse(url)
+        port_number = self.get_host_port(url_parse)
+        path_component = self.get_path_component(url_parse)
+        domain_name = url_parse.hostname
+    
+        self.connect(domain_name, port_number)
+
+        request = f"GET {path_component} {HTTP1_1}{HOST} {domain_name}\r\n{ACCEPT_CHARS}{CON_CLOSE}"
+        self.sendall(request)
+
+        http_response = self.recvall(self.socket)
+        
+        code = self.get_code(http_response)
+        body = self.get_body(http_response)
+        self.close()
+        
         return HTTPResponse(code, body)
+    
+#------------------------------------------------------------------------------------------------------------------------------------------------
+    def POST(self, url, args=None):
+
+        url_parse = urllib.parse.urlparse(url)
+        port_number = self.get_host_port(url_parse)
+        path_component = self.get_path_component(url_parse)
+        domain_name = url_parse.hostname
+
+        self.connect(domain_name, port_number)
+
+        args_urlencoded = urllib.parse.urlencode(args) if args else ''
+        args_urlencoded_length = str(len(args_urlencoded))
+
+        request = f"POST {path_component} {HTTP1_1}{HOST} {domain_name}\r\n{URL_ENCODED}{CONTENT_LENGTH} {args_urlencoded_length}\r\n{CON_CLOSE}{args_urlencoded}"
+        self.sendall(request)
+
+        http_response = self.recvall(self.socket)
+
+        code = self.get_code(http_response)
+        body = self.get_body(http_response)
+        self.close()
+
+        return HTTPResponse(code, body)
+    
+#------------------------------------------------------------------------------------------------------------------------------------------------
 
     def command(self, url, command="GET", args=None):
         if (command == "POST"):
