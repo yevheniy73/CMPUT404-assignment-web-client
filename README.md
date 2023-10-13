@@ -21,6 +21,6 @@ Software Foundation; All Rights Reserved under the PSF license (GPL
 compatible) http://docs.python.org/2/library/socketserver.html
 
 Resource Used Include:
-https://docs.python.org/3/library/urllib.parse.html
-https://www.ibm.com/docs/en/cics-ts/5.3?topic=protocol-http-requests
-https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST
+- https://docs.python.org/3/library/urllib.parse.html
+- https://www.ibm.com/docs/en/cics-ts/5.3?topic=protocol-http-requests
+- https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods/POST
